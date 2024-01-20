@@ -474,7 +474,7 @@ class WavtoSpec:
             np.savez_compressed(spec_file_path, s=Sxx_log_normalized, t = t, f = f, labels=labels)
 
             # Print out the path to the saved file
-            print(f"Spectrogram saved to {spec_file_path}")
+            # print(f"Spectrogram saved to {spec_file_path}")
 
         except ValueError as e:
             print(f"Error reading {file_path}: {e}")
@@ -723,7 +723,7 @@ class DataPlotter(QWidget):
         self.behavePlot.getViewBox().setLimits(yMin=y_start, yMax=y_end)
         self.behavePlot.getViewBox().setLimits(xMin=x_start, xMax=x_end)
 
-    def plot_file(self,filePath):
+    def plot_file(self,filePath, plotter):
 
         self.clear_plots()
         self.setupPlot()
@@ -834,12 +834,12 @@ class DataPlotter(QWidget):
         for index in indices_in_roi:
             # For each index in the ROI, extract the associated spec slice
             mask = (presumedTime < self.startEndTimes[1,index]) & (presumedTime > self.startEndTimes[0,index]) 
-            print("MASK SHAPE")
-            print(mask.shape)
+            # print("MASK SHAPE")
+            # print(mask.shape)
             relPlace = np.where(mask)[0]
-            print("RELPLACE")
-            print(relPlace)
-            print(relPlace.shape)
+            # print("RELPLACE")
+            # print(relPlace)
+            # print(relPlace.shape)
             tempImg[:,relPlace] = self.additionCount
             # print("WHAT IS ADDITION COUNT")
             # print(self.additionCount)

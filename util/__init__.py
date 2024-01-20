@@ -8,7 +8,7 @@ Created on Tue Oct 24 10:37:10 2023
 
 from .MetricMonitor import MetricMonitor
 from .SupConLoss import SupConLoss
-from .utils import Tweetyclr, Temporal_Augmentation, Custom_Contrastive_Dataset, TwoCropTransform, WavtoSpec      
+from .utils import Tweetyclr, Temporal_Augmentation, Custom_Contrastive_Dataset, TwoCropTransform, WavtoSpec, DataPlotter      
 
 __all__ = ['MetricMonitor',
            'SupConLoss',
@@ -16,5 +16,6 @@ __all__ = ['MetricMonitor',
            'Temporal_Augmentation', 
            'Custom_Contrastive_Dataset',
            'TwoCropTransform', 
-           'WavtoSpec'
+           'WavtoSpec',
+           'DataPlotter'
            ]
