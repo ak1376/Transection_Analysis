@@ -30,8 +30,6 @@ from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 import shutil
 
-# TODO: Include capacity for colorizing by multiple days and loading data from multiple days. 
-
 # =============================================================================
 #     # Set data parameters
 # =============================================================================

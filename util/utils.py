@@ -47,7 +47,7 @@ from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 
 
-class Tweetyclr:
+class Canary_Analysis:
     def __init__(self, num_spec, window_size, stride, folder_name, all_songs_data, masking_freq_tuple, spec_dim_tuple, exclude_transitions = False, category_colors = None):
         '''The init function should define:
             1. directory for bird
@@ -264,134 +264,6 @@ class Tweetyclr:
 
         save(p)
         show(p)
-
-    def find_slice_actual_labels(self, stacked_labels_for_window):
-        al = []
-        for i in np.arange(stacked_labels_for_window.shape[0]):
-            arr = stacked_labels_for_window[i,:]
-            unique_elements, counts = np.unique(arr, return_counts=True)
-            # print(unique_elements)
-            # print(counts)
-            sorted_indices = np.argsort(-counts)
-            val = unique_elements[sorted_indices[0]]
-            if val == 0:
-                if unique_elements.shape[0]>1:
-                    val = unique_elements[sorted_indices[1]]
-            al.append(val)
-
-        actual_labels = np.array(al)
-        
-        self.actual_labels = actual_labels
-
-    def shuffling(self, shuffled_indices = None):
-        
-        if shuffled_indices is None:
-            shuffled_indices = np.random.permutation(self.stacked_windows.shape[0])
-                    
-        self.shuffled_indices = shuffled_indices
-        
-        
-    def train_test_split(self, dataset, train_split_perc, shuffled_indices):
-        ''' 
-        The following is the procedure I want to do for the train_test_split.
-        
-        '''
-        
-        # I want to make training indices to be the first 80% of the shuffled data
-        split_point = int(train_split_perc*dataset.shape[0])
-        
-        anchor_indices = shuffled_indices[:split_point]
-
-        # Shuffle array1 using the shuffled indices
-        stacked_windows_for_analysis_modeling = dataset[shuffled_indices,:]
-        # Shuffle array2 using the same shuffled indices
-        stacked_labels_for_analysis_modeling= self.stacked_labels_for_window[shuffled_indices,:]
-        mean_colors_per_minispec_for_analysis_modeling = self.mean_colors_per_minispec[shuffled_indices, :]
-        
-        stacked_windows_train = torch.tensor(dataset[anchor_indices,:])
-        stacked_windows_train = stacked_windows_train.reshape(stacked_windows_train.shape[0], 1, self.time_dim, self.freq_dim)
-        anchor_indices = anchor_indices
-        # self.train_indices = np.array(training_indices)
-        
-        mean_colors_per_minispec_train = self.mean_colors_per_minispec[anchor_indices,:]
-        stacked_labels_train = self.stacked_labels_for_window[anchor_indices,:]
-        
-        
-        anchor_train_indices = anchor_indices
-        
-        return stacked_windows_train, stacked_labels_train, mean_colors_per_minispec_train, anchor_indices 
-        
-        
-class Temporal_Augmentation:
-    
-    def __init__(self, total_dict, simple_tweetyclr, tau_in_steps):
-        self.total_dict = total_dict
-        self.tweetyclr_obj = simple_tweetyclr
-        self.tau = tau_in_steps
-    
-    def __call__(self, x):
-        batch_data = x[0]
-        indices = x[1]
-        
-        # Find the number of augmentations we want to use (up until tau step ahead)
-        num_augs = np.arange(1, self.tau+1, 1).shape[0]
-    
-        # Preallocate tensors with the same shape as batch_data
-        
-        positive_aug_data = torch.empty(num_augs, 1, self.tweetyclr_obj.time_dim, self.tweetyclr_obj.freq_dim)
-        
-        # positive_aug_1 = torch.empty_like(batch_data)
-        # positive_aug_2 = torch.empty_like(batch_data)
-        
-        total_training_indices = list(self.total_dict.keys())
-        
-        positive_aug_indices = indices + np.arange(1,self.tau+1, 1)      
-            
-        if any(elem in indices for elem in np.sort(total_training_indices)[-self.tau:]):
-            positive_aug_indices = indices - np.arange(1,self.tau+1, 1)   
-            
-        try:
-            # Your code that might raise the exception
-            for i in np.arange(num_augs):
-                positive_aug_data[i, :,:,:] = torch.tensor(self.total_dict[int(positive_aug_indices[i])].reshape(batch_data.shape[0], 1, self.tweetyclr_obj.time_dim, self.tweetyclr_obj.freq_dim))
-        
-        except ValueError as e:
-            print(f"Encountered KeyError: {e}. Press Enter to continue...")
-            input()
-            
-
-        return positive_aug_data
-
-class Custom_Contrastive_Dataset(Dataset):
-    def __init__(self, tensor_data, slice_indices, tensor_labels, transform=None):
-        self.data = tensor_data
-        self.slice_indices = slice_indices
-        self.labels = tensor_labels
-        self.transform = transform
-
-    def __len__(self):
-        return len(self.data)
-
-    def __getitem__(self, index):
-        x = self.data[index]
-        index = self.slice_indices[index]
-        lab = self.labels[index]
-        
-        x = [x, lab, index]
-        x1 = self.transform(x) if self.transform else x
-
-        return [x1, index, lab]
-
-
-class TwoCropTransform:
-    """Create two crops of the same image"""
-    def __init__(self, transform):
-        self.transform = transform
-
-    def __call__(self, x):
-        # Get the two augmentations from jawn
-        aug = self.transform(x)
-        return [aug[i, :, :, :] for i in range(aug.shape[0])]
     
 class WavtoSpec:
     def __init__(self, src_dir, dst_dir):
