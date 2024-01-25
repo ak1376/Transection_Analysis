@@ -48,7 +48,7 @@ from PyQt5.QtGui import *
 
 
 class Canary_Analysis:
-    def __init__(self, num_spec, window_size, stride, folder_name, all_songs_data, masking_freq_tuple, spec_dim_tuple, exclude_transitions = False, category_colors = None):
+    def __init__(self, num_spec, window_size, stride, folder_name, masking_freq_tuple, spec_dim_tuple):
         '''The init function should define:
             1. directory for bird
             2. directory for python files
@@ -60,145 +60,197 @@ class Canary_Analysis:
             1. create the folder name if it does not exist already
 
         '''
-        # self.bird_dir = bird_dir
-        # self.directory = directory
         self.num_spec = num_spec
         self.window_size = window_size
         self.stride = stride
-        # self.analysis_path = analysis_path
-        self.category_colors = category_colors
         self.folder_name = folder_name
-        self.all_songs_data = all_songs_data
         self.masking_freq_tuple = masking_freq_tuple
         self.freq_dim = spec_dim_tuple[1]
         self.time_dim = spec_dim_tuple[0]
-        self.exclude_transitions = exclude_transitions
 
-        # Create the folder if it doesn't already exist
-        if not os.path.exists(folder_name+"/Plots/Window_Plots"):
-            os.makedirs(folder_name+"/Plots/Window_Plots")
-            print(f'Folder "{folder_name}" created successfully.')
-        else:
-            print(f'Folder "{folder_name}" already exists.')
-
-    def first_time_analysis(self):
-
+        # # Create the folder if it doesn't already exist
+        # if not os.path.exists(folder_name+"/Plots/Window_Plots"):
+        #     os.makedirs(folder_name+"/Plots/Window_Plots")
+        #     print(f'Folder "{folder_name}" created successfully.')
+        # else:
+        #     print(f'Folder "{folder_name}" already exists.')
+            
+    def organize_files(self, source_dir_list, dest_dir_list):
+        '''
+        This function will process wav files into Python npz files. Will also organize the Python npz files into song and not song directories
+        '''
+        for i in np.arange(len(source_dir_list)):
+            source_dir = source_dir_list[i]
+            dest_dir = dest_dir_list[i]
+            os.makedirs(dest_dir, exist_ok=True)
+            spectrogram_creator = WavtoSpec(source_dir, dest_dir)
+            spectrogram_creator.process_directory()
+            
+            # Extract the names of the song files
+            song_names = os.listdir(f'{source_dir}/corrected_song_mat_files')
+            
+            updated_names = []
+            for name in song_names:
+                # Split the name at underscores and count them
+                parts = name.split('_')
+                if len(parts) > 2:
+                    # Replace the second underscore with a dot
+                    parts[1] = parts[1] + '.'
+                    # Join the parts back together
+                    modified_name = '_'.join(parts[:2]) + '_'.join(parts[2:])
+                    # Remove the '.mat' extension
+                    if modified_name.endswith('.mat'):
+                        modified_name = modified_name[:-4]
+                    updated_names.append(modified_name)
+                else:
+                    # If there are not enough underscores, just remove '.mat'
+                    updated_names.append(name[:-4] if name.endswith('.mat') else name)
+                    
+            # Move the song files to another folder with the dest_dir
+            os.makedirs(f'{dest_dir}/songs', exist_ok=True)
+            song_dest_paths = [f'{dest_dir}/songs/{name}' + ".npz" for name in updated_names]
+            
+            source_path_list = []
+            for file_path in updated_names:
+                source_path = f'{dest_dir}/{file_path}.npz'
+                dest_path = f'{dest_dir}/songs/{file_path}.npz'
+                # Move each file to the destination folder
+                shutil.move(source_path, dest_path)
+            
+            # Now that we have moved all the songs to a folder, I will move the not 
+            # songs to another folder
+            os.makedirs(f'{dest_dir}/not_songs', exist_ok=True)
+            not_songs_source = [f'{dest_dir}/{file}' for file in os.listdir(dest_dir) if file.endswith('.npz')]
+            not_songs_dest = [f'{dest_dir}/not_songs/{file}' for file in os.listdir(dest_dir) if file.endswith('.npz')]
+            
+            for i in np.arange(len(not_songs_source)):
+                source_path = not_songs_source[i]
+                dest_path = not_songs_dest[i]
+                
+                shutil.move(source_path, dest_path)
+                
+    def process_day(self, dest_dir_path, day):
+        bird_dir = dest_dir_path
+        all_songs_data = [f'{bird_dir}/{element}' for element in os.listdir(bird_dir)] # Get the file paths of each numpy file from Yarden's data
+        all_songs_data.sort() # Sort spectrograms chronologically 
+        # I want to subset all_songs_data to only look at the specified number of spectrograms
+        index = self.days_for_analysis.index(day)
+        if len(all_songs_data)<self.num_spec[index]:
+            self.num_spec[index] = len(all_songs_data)
+        
+        num_spec_string = '_'.join(map(str, self.num_spec))
+        folder_name = f'{self.analysis_path}Days_For_Analysis_{self.days_string}_Num_Spectrograms_{num_spec_string}_Window_Size_{self.window_size}_Stride_{self.stride}' # 
+        os.makedirs(folder_name, exist_ok=True)
+        all_songs_data_subset = all_songs_data[0:self.num_spec[index]]
+        
+        os.makedirs(folder_name, exist_ok=True)
+        num_spec_value = self.num_spec[index]
+        
         # For each spectrogram we will extract
         # 1. Each timepoint's syllable label
         # 2. The spectrogram itself
         stacked_labels = [] 
         stacked_specs = []
-        for i in np.arange(self.num_spec):
+        for i in np.arange(num_spec_value):
             # Extract the data within the numpy file. We will use this to create the spectrogram
-            dat = np.load(self.all_songs_data[i])
+            dat = np.load(all_songs_data_subset[i])
             spec = dat['s']
             times = dat['t']
             frequencies = dat['f']
-            labels = dat['labels']
+            labels = dat['labels'] # Labels that will be used for color coding UMAP points
             labels = labels.T
-
-
-            # Let's get rid of higher order frequencies
-            mask = (frequencies<self.masking_freq_tuple[1])&(frequencies>self.masking_freq_tuple[0])
+            
+            # I want to replace the labels with the day of analysis
+            labels[:] = day
+        
+        
+        
+            # Apply high and low frequency thresholds to get a subsetted spectrogram
+            mask = (frequencies<highThresh)&(frequencies>lowThresh)
             masked_frequencies = frequencies[mask]
-
+        
             subsetted_spec = spec[mask.reshape(mask.shape[0],),:]
             
             stacked_labels.append(labels)
             stacked_specs.append(subsetted_spec)
-
+        
             
         stacked_specs = np.concatenate((stacked_specs), axis = 1)
         stacked_labels = np.concatenate((stacked_labels), axis = 0)
-        stacked_labels.shape = (stacked_labels.shape[0],1)
-
-
+        
         # Get a list of unique categories (syllable labels)
-        unique_categories = np.unique(stacked_labels)
-        if self.category_colors == None:
-            self.category_colors = {category: np.random.rand(3,) for category in unique_categories}
-            self.category_colors[0] = np.zeros((3)) # SIlence should be black
-            # open a file for writing in binary mode
-            with open(f'{self.folder_name}/category_colors.pkl', 'wb') as f:
-                # write the dictionary to the file using pickle.dump()
-                pickle.dump(self.category_colors, f)
+        unique_categories = np.unique(stacked_labels) # Efficient colorizing 
+        
+        # Create a dictionary that maps categories to random colors
+        category_colors = {category: np.random.rand(3,) for category in unique_categories}
+        
+        dx = np.diff(times)[0,0]
+        
+        # Now do the windowing procedure
+        stacked_windows, stacked_labels_for_window, stacked_window_times, mean_colors_per_minispec = windowing(stacked_specs, stacked_labels, dx, category_colors)
+        
+        
+        return stacked_specs, stacked_labels, category_colors, stacked_windows, stacked_labels_for_window, stacked_window_times, mean_colors_per_minispec, folder_name 
 
+
+    
+    def windowing(self, stacked_specs, stacked_labels, times, category_colors):
         spec_for_analysis = stacked_specs.T
         window_labels_arr = []
         embedding_arr = []
         # Find the exact sampling frequency (the time in miliseconds between one pixel [timepoint] and another pixel)
-        print(times.shape)
-        dx = np.diff(times)[0,0]
-
+        
+    
         # We will now extract each mini-spectrogram from the full spectrogram
         stacked_windows = []
         # Find the syllable labels for each mini-spectrogram
         stacked_labels_for_window = []
         # Find the mini-spectrograms onset and ending times 
         stacked_window_times = []
-
+    
         # The below for-loop will find each mini-spectrogram (window) and populate the empty lists we defined above.
-        for i in range(0, spec_for_analysis.shape[0] - self.window_size + 1, self.stride):
+        for i in range(0, spec_for_analysis.shape[0] - window_size + 1, stride):
             # Find the window
-            window = spec_for_analysis[i:i + self.window_size, :]
+            window = spec_for_analysis[i:i + window_size, :]
             # Get the window onset and ending times
-            window_times = dx*np.arange(i, i + self.window_size)
+            window_times = dx*np.arange(i, i + window_size)
             # We will flatten the window to be a 1D vector
             window = window.reshape(1, window.shape[0]*window.shape[1])
             # Extract the syllable labels for the window
-            labels_for_window = stacked_labels[i:i+self.window_size, :]
+            labels_for_window = stacked_labels[i:i+window_size, :]
             # Reshape the syllable labels for the window into a 1D array
             labels_for_window = labels_for_window.reshape(1, labels_for_window.shape[0]*labels_for_window.shape[1])
             # Populate the empty lists defined above
             stacked_windows.append(window)
             stacked_labels_for_window.append(labels_for_window)
             stacked_window_times.append(window_times)
-
+    
         # Convert the populated lists into a stacked numpy array
         stacked_windows = np.stack(stacked_windows, axis = 0)
         stacked_windows = np.squeeze(stacked_windows)
-
+    
         stacked_labels_for_window = np.stack(stacked_labels_for_window, axis = 0)
         stacked_labels_for_window = np.squeeze(stacked_labels_for_window)
-
+    
         stacked_window_times = np.stack(stacked_window_times, axis = 0)
-        # dict_of_spec_slices_with_slice_number = {i: stacked_windows[i, :] for i in range(stacked_windows.shape[0])}
-
+    
         # For each mini-spectrogram, find the average color across all unique syllables
         mean_colors_per_minispec = np.zeros((stacked_labels_for_window.shape[0], 3))
         for i in np.arange(stacked_labels_for_window.shape[0]):
-            list_of_colors_for_row = [self.category_colors[x] for x in stacked_labels_for_window[i,:]]
+            list_of_colors_for_row = [category_colors[x] for x in stacked_labels_for_window[i,:]]
             all_colors_in_minispec = np.array(list_of_colors_for_row)
             mean_color = np.mean(all_colors_in_minispec, axis = 0)
             mean_colors_per_minispec[i,:] = mean_color
-
-        self.stacked_windows = stacked_windows
-        self.stacked_labels_for_window = stacked_labels_for_window
-        self.mean_colors_per_minispec = mean_colors_per_minispec
-        self.stacked_window_times = stacked_window_times
-        self.masked_frequencies = masked_frequencies
-        # self.dict_of_spec_slices_with_slice_number = dict_of_spec_slices_with_slice_number
-
-
-    # def embeddable_image(self, data, folderpath_for_slices, window_times, iteration_number):
-    #     # This function will save an image for each mini-spectrogram. This will be used for understanding the UMAP plot.
+    
         
-    #     window_data = data[iteration_number, :]
-    #     window_times_subset = window_times[iteration_number, :]
+        return stacked_windows, stacked_labels_for_window, stacked_window_times, mean_colors_per_minispec
     
-    #     window_data.shape = (self.window_size, int(window_data.shape[0]/self.window_size))
-    #     window_data = window_data.T 
-    #     window_times = window_times_subset.reshape(1, window_times_subset.shape[0])
-    #     plt.pcolormesh(window_times, self.masked_frequencies, window_data, cmap='jet')
-    #     # let's save the plt colormesh as an image.
-    #     plt.savefig(f'{folderpath_for_slices}/Window_{iteration_number}.png')
-    #     plt.close()
-    
-    def embeddable_image(self, data):
+    def embeddable_image(data):
         data = (data.squeeze() * 255).astype(np.uint8)
         # convert to uint8
         data = np.uint8(data)
         image = Image.fromarray(data)
+        image = image.rotate(90, expand=True) 
         image = image.convert('RGB')
         # show PIL image
         im_file = BytesIO()
@@ -209,35 +261,28 @@ class Canary_Analysis:
         return img_str
     
     
-    def get_images(self, list_of_images):
-        return list(map(self.embeddable_image, list_of_images))
-
-
-    def compute_UMAP_decomp(self, zscored):
-        # Perform a UMAP embedding on the dataset of mini-spectrograms
-        reducer = umap.UMAP()
-        embedding = reducer.fit_transform(zscored)
-
-        return embedding
-
-    def plot_UMAP_embedding(self, embedding, mean_colors_per_minispec, image_paths, filepath_name, saveflag = False):
-
+    def get_images(list_of_images):
+        return list(map(embeddable_image, list_of_images))
+    
+    
+    def plot_UMAP_embedding(embedding, mean_colors_per_minispec, image_paths, filepath_name, saveflag = False):
+    
         # Specify an HTML file to save the Bokeh image to.
         # output_file(filename=f'{self.folder_name}Plots/{filename_val}.html')
         output_file(filename = f'{filepath_name}')
-
+    
         # Convert the UMAP embedding to a Pandas Dataframe
         spec_df = pd.DataFrame(embedding, columns=('x', 'y'))
-
-
+    
+    
         # Create a ColumnDataSource from the data. This contains the UMAP embedding components and the mean colors per mini-spectrogram
         source = ColumnDataSource(data=dict(x = embedding[:,0], y = embedding[:,1], colors=mean_colors_per_minispec))
-
-
+    
+    
         # Create a figure and add a scatter plot
         p = figure(width=800, height=600, tools=('pan, box_zoom, hover, reset'))
         p.scatter(x='x', y='y', size = 7, color = 'colors', source=source)
-
+    
         hover = p.select(dict(type=HoverTool))
         hover.tooltips = """
             <div>
@@ -251,7 +296,7 @@ class Canary_Analysis:
                 </div>
             </div>
         """
-
+    
         p.add_tools(HoverTool(tooltips="""
         """))
         
@@ -260,8 +305,8 @@ class Canary_Analysis:
         # source.data['image'] = []
         # for i in np.arange(spec_df.shape[0]):
         #     source.data['image'].append(f'{self.folder_name}/Plots/Window_Plots/Window_{i}.png')
-
-
+    
+    
         save(p)
         show(p)
     
