@@ -130,7 +130,7 @@ class Canary_Analysis:
                 shutil.move(source_path, dest_path)
                 
     def process_day(self, dest_dir_path, day):
-        bird_dir = dest_dir_path
+        bird_dir = f'{dest_dir_path}/songs'
         all_songs_data = [f'{bird_dir}/{element}' for element in os.listdir(bird_dir)] # Get the file paths of each numpy file from Yarden's data
         all_songs_data.sort() # Sort spectrograms chronologically 
         # I want to subset all_songs_data to only look at the specified number of spectrograms
@@ -166,7 +166,7 @@ class Canary_Analysis:
         
         
             # Apply high and low frequency thresholds to get a subsetted spectrogram
-            mask = (frequencies<highThresh)&(frequencies>lowThresh)
+            mask = (frequencies<self.masking_freq_tuple[1])&(frequencies>self.masking_freq_tuple[0])
             masked_frequencies = frequencies[mask]
         
             subsetted_spec = spec[mask.reshape(mask.shape[0],),:]
@@ -187,14 +187,14 @@ class Canary_Analysis:
         dx = np.diff(times)[0,0]
         
         # Now do the windowing procedure
-        stacked_windows, stacked_labels_for_window, stacked_window_times, mean_colors_per_minispec = windowing(stacked_specs, stacked_labels, dx, category_colors)
+        stacked_windows, stacked_labels_for_window, stacked_window_times, mean_colors_per_minispec = self.windowing(stacked_specs, stacked_labels, dx, category_colors)
         
         
         return stacked_specs, stacked_labels, category_colors, stacked_windows, stacked_labels_for_window, stacked_window_times, mean_colors_per_minispec, folder_name 
 
 
     
-    def windowing(self, stacked_specs, stacked_labels, times, category_colors):
+    def windowing(self, stacked_specs, stacked_labels, dx, category_colors):
         spec_for_analysis = stacked_specs.T
         window_labels_arr = []
         embedding_arr = []
@@ -209,15 +209,15 @@ class Canary_Analysis:
         stacked_window_times = []
     
         # The below for-loop will find each mini-spectrogram (window) and populate the empty lists we defined above.
-        for i in range(0, spec_for_analysis.shape[0] - window_size + 1, stride):
+        for i in range(0, spec_for_analysis.shape[0] - self.window_size + 1, self.stride):
             # Find the window
-            window = spec_for_analysis[i:i + window_size, :]
+            window = spec_for_analysis[i:i + self.window_size, :]
             # Get the window onset and ending times
-            window_times = dx*np.arange(i, i + window_size)
+            window_times = dx*np.arange(i, i + self.window_size)
             # We will flatten the window to be a 1D vector
             window = window.reshape(1, window.shape[0]*window.shape[1])
             # Extract the syllable labels for the window
-            labels_for_window = stacked_labels[i:i+window_size, :]
+            labels_for_window = stacked_labels[i:i+self.window_size, :]
             # Reshape the syllable labels for the window into a 1D array
             labels_for_window = labels_for_window.reshape(1, labels_for_window.shape[0]*labels_for_window.shape[1])
             # Populate the empty lists defined above
@@ -245,7 +245,7 @@ class Canary_Analysis:
         
         return stacked_windows, stacked_labels_for_window, stacked_window_times, mean_colors_per_minispec
     
-    def embeddable_image(data):
+    def embeddable_image(self, data):
         data = (data.squeeze() * 255).astype(np.uint8)
         # convert to uint8
         data = np.uint8(data)
@@ -261,11 +261,11 @@ class Canary_Analysis:
         return img_str
     
     
-    def get_images(list_of_images):
-        return list(map(embeddable_image, list_of_images))
+    def get_images(self, list_of_images):
+        return list(map(self.embeddable_image, list_of_images))
     
     
-    def plot_UMAP_embedding(embedding, mean_colors_per_minispec, image_paths, filepath_name, saveflag = False):
+    def plot_UMAP_embedding(self, embedding, mean_colors_per_minispec, image_paths, filepath_name, saveflag = False):
     
         # Specify an HTML file to save the Bokeh image to.
         # output_file(filename=f'{self.folder_name}Plots/{filename_val}.html')

@@ -9,7 +9,7 @@ Created on Fri Jan 12 14:15:03 2024
 import numpy as np
 import os
 # absolute_path = '/home/akapoor'
-absolute_path = '/Users/AnanyaKapoor'
+absolute_path = '/home/akapoor'
 os.chdir(f'{absolute_path}/Dropbox (University of Oregon)/Kapoor_Ananya/01_Projects/01_b_Canary_SSL/Transection_Analysis/')
 # sys.path.append('/home/akapoor/Dropbox (University of Oregon)/Kapoor_Ananya/01_Projects/01_b_Canary_SSL/TweetyCLR/USA_5207_Analysis/')
 from util import Canary_Analysis, DataPlotter
@@ -55,13 +55,15 @@ transection_obj = Canary_Analysis(num_spec, window_size, stride, folder_name, ma
 transection_obj.days_for_analysis = days_for_analysis
 transection_obj.analysis_path = analysis_path
 transection_obj.days_string = days_string
+transection_obj.masking_freq_tuple = masking_freq_tuple
+
 # Now I want to write code that will process each day
 
-dest_dir_list = [f'{filepath}/songs' for filepath in dest_dir_list]
+# dest_dir_list = [f'{filepath}/songs' for filepath in dest_dir_list]
 
 # Create Python Files from the raw wav files
 
-transection_obj.organize_files(source_dir_list, dest_dir_list)
+# transection_obj.organize_files(source_dir_list, dest_dir_list)
 
 stacked_specs_list = []
 stacked_labels_list = []
