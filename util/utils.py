@@ -87,7 +87,7 @@ class Canary_Analysis:
             spectrogram_creator.process_directory()
             
             # Extract the names of the song files
-            song_names = os.listdir(f'{source_dir}/corrected_song_mat_files')
+            song_names = os.listdir(f'{source_dir}')
             
             updated_names = []
             for name in song_names:
@@ -101,10 +101,24 @@ class Canary_Analysis:
                     # Remove the '.mat' extension
                     if modified_name.endswith('.mat'):
                         modified_name = modified_name[:-4]
+                    elif modified_name.endswith('.wav'):
+                        modified_name = modified_name[:-4]
+                    
+                    
+                    # Weird thing in naming convention where the second period should be a _
+                    # Find the position of the first period
+                    first_period_index = modified_name.find('.')
+                    
+                    # Find the position of the second period
+                    second_period_index = modified_name.find('.', first_period_index + 1)
+                    
+                    modified_name = modified_name[:second_period_index] + "_" + modified_name[second_period_index + 1:]
+
                     updated_names.append(modified_name)
                 else:
                     # If there are not enough underscores, just remove '.mat'
                     updated_names.append(name[:-4] if name.endswith('.mat') else name)
+                    updated_names.append(name[:-4] if name.endswith('.wav') else name)
                     
             # Move the song files to another folder with the dest_dir
             os.makedirs(f'{dest_dir}/songs', exist_ok=True)
