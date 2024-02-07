@@ -152,12 +152,12 @@ class Canary_Analysis:
         if len(all_songs_data)<self.num_spec[index]:
             self.num_spec[index] = len(all_songs_data)
         
-        num_spec_string = '_'.join(map(str, self.num_spec))
-        folder_name = f'{self.analysis_path}Days_For_Analysis_{self.days_string}_Num_Spectrograms_{num_spec_string}_Window_Size_{self.window_size}_Stride_{self.stride}' # 
-        os.makedirs(folder_name, exist_ok=True)
+        # num_spec_string = '_'.join(map(str, self.num_spec))
+        # folder_name = f'{self.analysis_path}Days_For_Analysis_{self.days_string}_Num_Spectrograms_{num_spec_string}_Window_Size_{self.window_size}_Stride_{self.stride}' # 
+        # os.makedirs(folder_name, exist_ok=True)
         all_songs_data_subset = all_songs_data[0:self.num_spec[index]]
         
-        os.makedirs(folder_name, exist_ok=True)
+        # os.makedirs(folder_name, exist_ok=True)
         num_spec_value = self.num_spec[index]
         
         # For each spectrogram we will extract
@@ -204,7 +204,7 @@ class Canary_Analysis:
         stacked_windows, stacked_labels_for_window, stacked_window_times, mean_colors_per_minispec = self.windowing(stacked_specs, stacked_labels, dx, category_colors)
         
         
-        return stacked_specs, stacked_labels, category_colors, stacked_windows, stacked_labels_for_window, stacked_window_times, mean_colors_per_minispec, folder_name 
+        return stacked_specs, stacked_labels, category_colors, stacked_windows, stacked_labels_for_window, stacked_window_times, mean_colors_per_minispec 
 
 
     
@@ -295,7 +295,7 @@ class Canary_Analysis:
     
         # Create a figure and add a scatter plot
         p = figure(width=800, height=600, tools=('pan, box_zoom, hover, reset'))
-        p.scatter(x='x', y='y', size = 7, color = 'colors', source=source)
+        p.scatter(x='x', y='y', size = 7, alpha = 0.2, color = 'colors', source=source)
     
         hover = p.select(dict(type=HoverTool))
         hover.tooltips = """
