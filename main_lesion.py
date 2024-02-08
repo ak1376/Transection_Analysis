@@ -27,30 +27,30 @@ from PyQt5.QtGui import *
 
 # Let's create a list of source directories for which we will create Python files for
 # days_for_analysis = [15, 17, 18, 19, 101, 102, 105, 106, 107]
-days_for_analysis = [15, 101, 105, 110]
+days_for_analysis = [13, 15, 108, 109, 114, 115]
 
 
 source_dir_list = []
 dest_dir_list = []
 for day in days_for_analysis:
-    source_dir_list.append(f'{absolute_path}/Dropbox (University of Oregon)/AK_RHV_Analysis/AreaX_lesions/USA5336/wav_files/{day}/songs')
-    dest_dir_list.append(f'{absolute_path}/Dropbox (University of Oregon)/AK_RHV_Analysis/AreaX_lesions/USA5336/{day}/Python_Files')
+    source_dir_list.append(f'{absolute_path}/Dropbox (University of Oregon)/AK_RHV_Analysis/AreaX_lesions/USA5347/wav_files/{day}/songs')
+    dest_dir_list.append(f'{absolute_path}/Dropbox (University of Oregon)/AK_RHV_Analysis/AreaX_lesions/USA5347/{day}/Python_Files')
 
 # source_dir_list = [f'{absolute_path}/Dropbox (University of Oregon)/AK_RHV_Analysis/AreaX_lesions/USA5336/wav_files/15/songs', f'{absolute_path}/Dropbox (University of Oregon)/AK_RHV_Analysis/AreaX_lesions/USA5336/wav_files/105/songs']
 # dest_dir_list = [f'{absolute_path}/Dropbox (University of Oregon)/AK_RHV_Analysis/AreaX_lesions/USA5336/15/Python_Files', f'{absolute_path}/Dropbox (University of Oregon)/AK_RHV_Analysis/AreaX_lesions/USA5336/105/Python_Files' ]
 
 # Initialize the Canary_Analysis object
 
-num_spec = int(50)*np.ones((len(source_dir_list)))
+num_spec = int(20)*np.ones((len(source_dir_list)))
 num_spec = num_spec.astype(int).tolist()
 
-num_spec = [20, 15, 11, 40] # Temporary
+num_spec = [40, 20, 15, 20, 20, 20] # Temporary
 # num_spec = [50, 16] # How many spectrogram from day at position 0, how many spectrogram from day at position 1
 window_size = 100 # The window size for UMAP 
 stride = 10 # Stride size for analysis 
 
 # This is the upstream location where analysis results are stored.
-analysis_path = f'{absolute_path}/Dropbox (University of Oregon)/AK_RHV_Analysis/AreaX_lesions/USA5336/UMAP_Analysis/'
+analysis_path = f'{absolute_path}/Dropbox (University of Oregon)/AK_RHV_Analysis/AreaX_lesions/USA5347/UMAP_Analysis/'
 
 # Define the folder name. THe results will be directly stored here.
 days_string = '_'.join(map(str, days_for_analysis))
@@ -77,7 +77,7 @@ transection_obj.masking_freq_tuple = masking_freq_tuple
 
 # Create Python Files from the raw wav files
 
-transection_obj.organize_files(source_dir_list, dest_dir_list)
+# transection_obj.organize_files(source_dir_list, dest_dir_list)
 
 stacked_specs_list = []
 stacked_labels_list = []
@@ -126,11 +126,29 @@ stacked_window_times = np.concatenate((stacked_window_times_list), axis = 0)
 num_slices = []
 for i in np.arange(len(days_for_analysis)):
     num_slices.append(stacked_windows_list[i].shape[0])
+    
+
+# =============================================================================
+# NON-PARAMETRIC UMAP    
+# =============================================================================
 
 reducer = umap.UMAP()
 embedding = reducer.fit_transform(stacked_windows)
 np.save(f'{folder_name}/embedding.npy', embedding)
 # embedding = np.load(f'{folder_name}/embedding.npy')
+
+# =============================================================================
+# PARAMETRIC UMAP
+# =============================================================================
+
+
+
+
+
+
+
+
+
 
 plt.figure()
 
@@ -153,10 +171,12 @@ day_labels.shape = (day_labels.shape[0],)
 # 3. Light Red: 255, 182, 193
 # 4. Dark Red: 139, 0, 0
 
-mean_colors_per_minispec[day_labels == 15, :] = np.array([173, 216, 230])/255
-mean_colors_per_minispec[day_labels == 101, :] = np.array([0, 0, 139])/255
-mean_colors_per_minispec[day_labels == 105, :] = np.array([255, 182, 193])/255
-mean_colors_per_minispec[day_labels == 110, :] = np.array([139, 0, 0])/255
+mean_colors_per_minispec[day_labels == 13, :] = np.array([255, 102, 102])/255
+mean_colors_per_minispec[day_labels == 15, :] = np.array([204, 0, 0])/255
+mean_colors_per_minispec[day_labels == 108, :] = np.array([102, 255, 102])/255
+mean_colors_per_minispec[day_labels == 109, :] = np.array([0, 204, 0])/255
+mean_colors_per_minispec[day_labels == 114, :] = np.array([102, 102, 255])/255
+mean_colors_per_minispec[day_labels == 115, :] = np.array([0, 0, 204])/255
 
 plt.figure()
 for d in days_for_analysis:
